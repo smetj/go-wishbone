@@ -21,8 +21,8 @@ Example
     func main() {
 
         router  := router.NewRouter()
-        input1  := testevent.NewModule("input1", "")
-        input2  := testevent.NewModule("input2", "")
+        input1  := testevent.NewModule("input1", "Hello I am number one.")
+        input2  := testevent.NewModule("input2", "Hello I am number two")
         funnel  := funnel.NewModule("funnel", []string{"input1","input2"})
         output  := stdout.NewModule("output")
 
