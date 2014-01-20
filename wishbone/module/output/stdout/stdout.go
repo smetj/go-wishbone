@@ -10,13 +10,16 @@ func NewModule(name string)actor.Actor{
     stdout.SetName(name)
 
     stdout.CreateQueue("inbox")
-    stdout.RegisterConsumer(consume, "inbox")
+    c := generateConsumer(stdout.Name)
+    stdout.RegisterConsumer(c, "inbox")
     return stdout
 }
 
-func consume(event event.Event){
-    if event.Data != ""{
-        fmt.Println(event.Data)
+func generateConsumer(name string)func(event.Event){
+    return func(event event.Event){
+        if event.Data != ""{
+            fmt.Printf("%v - %v\n",name, event.Data)
+        }
     }
 }
 
