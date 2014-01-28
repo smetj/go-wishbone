@@ -23,7 +23,7 @@ Example
         router  := router.NewRouter()
         input1  := testevent.NewModule("input1", "Hello I am number one.")
         input2  := testevent.NewModule("input2", "Hello I am number two")
-        funnel  := funnel.NewModule("funnel", []string{"input1","input2"})
+        funnel  := funnel.NewModule("funnel")
         output  := stdout.NewModule("output")
 
         router.Register(&input1)
