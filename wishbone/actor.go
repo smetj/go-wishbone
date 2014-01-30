@@ -16,9 +16,9 @@ const (
 func NewActor() Actor {
 	a := Actor{}
 	a.Queuepool = make(map[string]*Queue)
-	a.logs = make(chan Log, 10)
 	a.Name = uuid.New()
 	a.CreateQueue("_logs", 100)
+	a.CreateQueue("_metrics", 100)
 	return a
 }
 
@@ -44,7 +44,6 @@ func (q *Queue) IncrementTotalHits() {
 type Actor struct {
 	Name      string
 	Queuepool map[string]*Queue
-	logs      chan (Log)
 	PreHook   func(*Actor)
 	PostHook  func(*Actor)
 }
@@ -57,10 +56,6 @@ func (a *Actor) SetName(name string) {
 	a.Name = name
 }
 
-func (a *Actor) log(level string, message string) {
-	a.logs <- Log{Level: level, Time: time.Now().Unix(), Source: a.Name, Message: message}
-}
-
 func (a *Actor) Log(level string, message string) {
 	l := event.NewEvent()
 	l.Data = Log{Level: level, Time: time.Now().Unix(), Source: a.Name, Message: message}
@@ -68,6 +63,7 @@ func (a *Actor) Log(level string, message string) {
 }
 
 func (a *Actor) Start() {
+	go a.metricGatherer()
 	if a.PreHook != nil {
 		a.Log("debug", "PreHook() found thus executing.")
 		a.PreHook(a)
@@ -80,8 +76,7 @@ func (a *Actor) Start() {
 			a.Queuepool[k].admin <- Start
 		}
 	}
-	go a.logGatherer()
-	go a.metricGatherer()
+
 	a.Log("debug", "Start")
 }
 
@@ -111,12 +106,15 @@ func (a *Actor) CreateQueue(name string, size int) {
 }
 
 func (a *Actor) GetQueue(name string) chan event.Event {
-	if _, ok := a.Queuepool[name]; ok {
-		//
-	} else {
-		a.CreateQueue(name, 0)
-	}
 	return a.Queuepool[name].Queue
+}
+
+func (a *Actor) HasQueue(name string) bool {
+	if _, ok := a.Queuepool[name]; ok {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (a *Actor) RegisterConsumer(c func(event.Event), q string) {
@@ -192,7 +190,7 @@ begin:
 }
 
 func (a *Actor) metricGatherer() {
-	a.Log("debug", "Start metricGatherer")
+
 	for {
 		for queue, _ := range a.Queuepool {
 			total := a.Queuepool[queue].total
@@ -201,15 +199,8 @@ func (a *Actor) metricGatherer() {
 			var tmp = a.Queuepool[queue]
 			tmp.prev_total = total
 			a.Queuepool[queue] = tmp
-
-			a.Log("info", fmt.Sprintf("Module: %s, Queue: %s, Rate: %d", a.Name, queue, rate))
-			time.Sleep(time.Second * 1)
+			a.Log("info", fmt.Sprintf("Queue: %s, Rate: %d", queue, rate))
 		}
-	}
-}
-
-func (a *Actor) logGatherer() {
-	for {
-		fmt.Println(<-a.logs)
+		time.Sleep(time.Second * 1)
 	}
 }

@@ -3,8 +3,6 @@ package funnel
 import "wishbone"
 import "wishbone/event"
 
-// import "fmt"
-
 func NewModule(name string) actor.Actor {
 	funnel := actor.NewActor()
 	funnel.SetName(name)
@@ -15,8 +13,10 @@ func NewModule(name string) actor.Actor {
 
 func PreHook(a *actor.Actor) {
 	for index, _ := range a.Queuepool {
-		c := generateConsumer(a.Queuepool["outbox"].Queue)
-		a.RegisterConsumer(c, index)
+		if index != "outbox" && index != "_logs" && index != "_metrics" {
+			c := generateConsumer(a.Queuepool["outbox"].Queue)
+			a.RegisterConsumer(c, index)
+		}
 	}
 }
 
