@@ -199,7 +199,7 @@ func (a *Actor) metricGatherer() {
 			var tmp = a.Queuepool[queue]
 			tmp.prev_total = total
 			a.Queuepool[queue] = tmp
-			a.Log("info", fmt.Sprintf("Queue: %s, Rate: %d", queue, rate))
+			a.Log("info", fmt.Sprintf("Queue: %s, Rate: %d, Lenth: %d", queue, rate, len(a.Queuepool[queue].Queue)))
 		}
 		time.Sleep(time.Second * 1)
 	}
