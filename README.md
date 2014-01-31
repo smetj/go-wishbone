@@ -38,3 +38,8 @@ Example
         router.Start()
         router.Block()
     }
+
+More Examples
+-------------
+
+More examples can be found at https://github.com/smetj/experiments/tree/master/go/go-wishbone
