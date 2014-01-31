@@ -1,7 +1,8 @@
-package fanout
+package roundrobin
 
 import "wishbone"
 import "wishbone/event"
+import "math/rand"
 
 // import "fmt"
 
@@ -29,8 +30,10 @@ func PreHook(a *actor.Actor) {
 
 func generateConsumer(destination_list []chan event.Event) func(event.Event) {
 	return func(e event.Event) {
-		for _, destination := range destination_list {
-			destination <- e
-		}
+		destination_list[random(0, len(destination_list))] <- e
 	}
+}
+
+func random(min, max int) int {
+	return rand.Intn(max-min) + min
 }
