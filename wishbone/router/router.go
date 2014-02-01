@@ -74,6 +74,7 @@ func (r *Router) Register(module Module) {
 func (r *Router) Start() {
 	for _, module := range r.module {
 		r.Connect(fmt.Sprintf("%v.%v", module.GetName(), "_logs"), fmt.Sprintf("_internal_logs.%v", module.GetName()))
+		r.Connect(fmt.Sprintf("%v.%v", module.GetName(), "_metrics"), fmt.Sprintf("_internal_metrics.%v", module.GetName()))
 	}
 	for _, module := range r.module {
 		module.Start()

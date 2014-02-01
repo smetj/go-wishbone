@@ -29,6 +29,14 @@ type Log struct {
 	Message (string)
 }
 
+type Metric struct {
+	Time   (int64)
+	Module (string)
+	Queue  (string)
+	Rate   (uint64)
+	Size   (int)
+}
+
 type Queue struct {
 	Queue      chan (event.Event)
 	admin      chan (int)
@@ -199,7 +207,10 @@ func (a *Actor) metricGatherer() {
 			var tmp = a.Queuepool[queue]
 			tmp.prev_total = total
 			a.Queuepool[queue] = tmp
-			a.Log("info", fmt.Sprintf("Queue: %s, Rate: %d, Lenth: %d", queue, rate, len(a.Queuepool[queue].Queue)))
+
+			m := event.NewEvent()
+			m.Data = Metric{Time: time.Now().Unix(), Module: a.Name, Queue: queue, Rate: rate, Size: len(a.Queuepool[queue].Queue)}
+			a.Queuepool["_metrics"].Queue <- m
 		}
 		time.Sleep(time.Second * 1)
 	}
