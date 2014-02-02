@@ -2,6 +2,7 @@ package actor
 
 import "fmt"
 import "time"
+import "os"
 
 // import "wishbone/logger"
 import "wishbone/event"
@@ -31,10 +32,12 @@ type Log struct {
 
 type Metric struct {
 	Time   (int64)
-	Module (string)
-	Queue  (string)
-	Rate   (uint64)
-	Size   (int)
+	Type   (string)
+	Source (string)
+	Name   (string)
+	Value  (uint64)
+	Unit   (string)
+	Tags   ([]string)
 }
 
 type Queue struct {
@@ -199,6 +202,8 @@ begin:
 
 func (a *Actor) metricGatherer() {
 
+	hostname, _ := os.Hostname()
+
 	for {
 		for queue, _ := range a.Queuepool {
 			total := a.Queuepool[queue].total
@@ -208,9 +213,16 @@ func (a *Actor) metricGatherer() {
 			tmp.prev_total = total
 			a.Queuepool[queue] = tmp
 
-			m := event.NewEvent()
-			m.Data = Metric{Time: time.Now().Unix(), Module: a.Name, Queue: queue, Rate: rate, Size: len(a.Queuepool[queue].Queue)}
-			a.Queuepool["_metrics"].Queue <- m
+			metrics := []Metric{}
+			metrics = append(metrics, Metric{Time: time.Now().Unix(), Type: "wishbone", Source: hostname, Name: fmt.Sprintf("%v.queue.%v.rate", a.Name, queue), Value: rate, Unit: "msg/s", Tags: nil})
+			metrics = append(metrics, Metric{Time: time.Now().Unix(), Type: "wishbone", Source: hostname, Name: fmt.Sprintf("%v.queue.%v.size", a.Name, queue), Value: uint64(len(a.Queuepool[queue].Queue)), Unit: "msg", Tags: nil})
+
+			for _, metric := range metrics {
+				m := event.NewEvent()
+				m.Data = metric
+				a.Queuepool["_metrics"].Queue <- m
+			}
+
 		}
 		time.Sleep(time.Second * 1)
 	}
