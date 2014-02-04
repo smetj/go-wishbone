@@ -39,7 +39,7 @@ func generateConsumer(address string, a actor.Actor) func(event.Event) {
 
 	return func(e event.Event) {
 
-		_, err = conn.Write([]byte(e.Data.(actor.Metric).Name))
+		_, err = conn.Write([]byte(e.Data.(string)))
 		if err != nil {
 			fmt.Println("Write to server failed:", err.Error())
 			os.Exit(1)
