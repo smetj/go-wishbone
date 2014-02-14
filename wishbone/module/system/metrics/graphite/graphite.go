@@ -17,11 +17,12 @@ func NewModule(name string) actor.Actor {
 	return graphite
 }
 
-func generateConsumer(a actor.Actor) func(event.Event) {
+func generateConsumer(a actor.Actor) func(event.Event) error {
 
-	return func(e event.Event) {
+	return func(e event.Event) error {
 		metric := fmt.Sprintf("%v.%v.%v %v %v\n", e.Data.(actor.Metric).Source, os.Args[0], e.Data.(actor.Metric).Name, e.Data.(actor.Metric).Value, e.Data.(actor.Metric).Time)
 		e.Data = metric
 		a.Queuepool["outbox"].Queue <- e
+		return nil
 	}
 }

@@ -27,10 +27,11 @@ func PreHook(a *actor.Actor) {
 	a.RegisterConsumer(c, "inbox")
 }
 
-func generateConsumer(destination_list []chan event.Event) func(event.Event) {
-	return func(e event.Event) {
+func generateConsumer(destination_list []chan event.Event) func(event.Event) error {
+	return func(e event.Event) error {
 		for _, destination := range destination_list {
 			destination <- e
 		}
+		return nil
 	}
 }

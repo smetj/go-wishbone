@@ -20,8 +20,9 @@ func PreHook(a *actor.Actor) {
 	}
 }
 
-func generateConsumer(output chan event.Event) func(event.Event) {
-	return func(event event.Event) {
+func generateConsumer(output chan event.Event) func(event.Event) error {
+	return func(event event.Event) error {
 		output <- event
+		return nil
 	}
 }

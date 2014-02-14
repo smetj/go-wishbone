@@ -3,8 +3,6 @@ package testevent
 import "wishbone"
 import "wishbone/event"
 
-// import "time"
-
 func NewModule(name string, data string) actor.Actor {
 	testevent := actor.NewActor()
 	testevent.SetName(name)

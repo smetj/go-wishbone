@@ -7,6 +7,8 @@ import "net"
 import "os"
 import "fmt"
 
+// import "errors"
+
 // import "reflect"
 
 func NewModule(name string, address string, success bool, failed bool) actor.Actor {
@@ -23,7 +25,7 @@ func NewModule(name string, address string, success bool, failed bool) actor.Act
 	return tcp
 }
 
-func generateConsumer(address string, a actor.Actor) func(event.Event) {
+func generateConsumer(address string, a actor.Actor) func(event.Event) error {
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
@@ -37,12 +39,9 @@ func generateConsumer(address string, a actor.Actor) func(event.Event) {
 		os.Exit(1)
 	}
 
-	return func(e event.Event) {
+	return func(e event.Event) error {
 
 		_, err = conn.Write([]byte(e.Data.(string)))
-		if err != nil {
-			fmt.Println("Write to server failed:", err.Error())
-			os.Exit(1)
-		}
+		return err
 	}
 }

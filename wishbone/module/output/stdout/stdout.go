@@ -15,16 +15,17 @@ func NewModule(name string, silent bool) actor.Actor {
 	return stdout
 }
 
-func generateConsumer(name string, silent bool) func(event.Event) {
+func generateConsumer(name string, silent bool) func(event.Event) error {
 	if silent == true {
-		return func(event event.Event) {
-			//
+		return func(event event.Event) error {
+			return nil
 		}
 	} else {
-		return func(event event.Event) {
+		return func(event event.Event) error {
 			if event.Data != "" {
 				fmt.Printf("%v - %v\n", name, event.Data)
 			}
+			return nil
 		}
 	}
 }

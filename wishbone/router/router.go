@@ -28,12 +28,14 @@ type Router struct {
 
 type Module interface {
 	Start()
-	Stop()
+	Stop(string)
 	Pause()
 	GetName() string
 	GetQueue(name string) chan event.Event
+	SetQueue(name string, q chan event.Event)
 	HasQueue(string) bool
 	CreateQueue(string, int)
+	MarkQueueConnected(string)
 }
 
 func (r *Router) Forward(source chan event.Event, destination chan event.Event) {
@@ -56,8 +58,11 @@ func (r *Router) Connect(source string, destination string) {
 		r.module[d[0]].CreateQueue(d[1], 10)
 	}
 
-	src := r.module[s[0]].GetQueue(s[1])
 	dst := r.module[d[0]].GetQueue(d[1])
+	src := r.module[s[0]].GetQueue(s[1])
+	r.module[s[0]].MarkQueueConnected(s[1])
+	// r.module[s[0]].SetQueue(s[1], r.module[d[0]].GetQueue(d[1]))
+
 	go func() {
 		for {
 			event := <-src

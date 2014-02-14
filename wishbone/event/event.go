@@ -1,17 +1,12 @@
 package event
+
 // import "fmt"
 
 func NewEvent() Event {
-    return Event{Header:make(map[string]HeaderEntry)}
+	return Event{Header: make(map[string]map[string]interface{})}
 }
+
 type Event struct {
-    Header map[string]HeaderEntry
-    Data interface{}
-}
-type HeaderEntry struct{
-    TTL int
-    Data string
-}
-func (h HeaderEntry) IncrementTTL(){
-    h.TTL++
+	Header map[string]map[string]interface{}
+	Data   interface{}
 }

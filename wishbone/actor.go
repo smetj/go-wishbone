@@ -9,9 +9,10 @@ import "wishbone/event"
 import "code.google.com/p/go-uuid/uuid"
 
 const (
-	Start = 0
-	Stop  = 1
-	Pause = 2
+	None  = 0
+	Start = 1
+	Stop  = 2
+	Pause = 3
 )
 
 func NewActor() Actor {
@@ -44,6 +45,8 @@ type Queue struct {
 	Queue      chan (event.Event)
 	admin      chan (int)
 	function   interface{}
+	state      int
+	connected  bool
 	total      uint64
 	prev_total uint64
 }
@@ -84,26 +87,41 @@ func (a *Actor) Start() {
 
 	for k, _ := range a.Queuepool {
 		if a.Queuepool[k].admin != nil {
+			if k != "_metrics" && k != "_logs" {
+				a.Queuepool[k].admin <- Start
+				a.Queuepool[k].state = Start
+			}
+		} else if a.Queuepool[k].connected == false {
+			a.Log("debug", fmt.Sprintf("Queue %v is not connected and has no consumer registering nullConsumer.", k))
+			a.RegisterConsumer(nullConsumer, k)
 			a.Queuepool[k].admin <- Start
+			a.Queuepool[k].state = Start
 		}
 	}
-
 	a.Log("debug", "Start")
 }
 
-func (a *Actor) Stop() {
-	for k, _ := range a.Queuepool {
-		if a.Queuepool[k].admin != nil {
-			a.Queuepool[k].admin <- Stop
+func (a *Actor) Stop(queue string) {
+	if queue == "" {
+		for k, _ := range a.Queuepool {
+			if a.Queuepool[k].admin != nil {
+				a.Queuepool[k].admin <- Stop
+				a.Queuepool[k].state = Stop
+			}
 		}
+		a.Log("debug", "Stopping all queues.")
+	} else {
+		a.Queuepool[queue].admin <- Stop
+		a.Queuepool[queue].state = Stop
+		a.Log("debug", fmt.Sprintf("Stopping queue %v.", queue))
 	}
-	a.Log("debug", "Stop")
 }
 
 func (a *Actor) Pause() {
 	for k, _ := range a.Queuepool {
 		if a.Queuepool[k].admin != nil {
 			a.Queuepool[k].admin <- Pause
+			a.Queuepool[k].state = Pause
 		}
 	}
 	a.Log("debug", "Pause")
@@ -112,12 +130,16 @@ func (a *Actor) Pause() {
 func (a *Actor) CreateQueue(name string, size int) {
 	var tmp = new(Queue)
 	tmp.Queue = make(chan event.Event, size)
+	tmp.state = None
 	a.Queuepool[name] = tmp
 	a.Log("debug", fmt.Sprintf("Queue %v created with size of %v", name, size))
 }
 
 func (a *Actor) GetQueue(name string) chan event.Event {
 	return a.Queuepool[name].Queue
+}
+func (a *Actor) SetQueue(name string, q chan event.Event) {
+	a.Queuepool[name].Queue = q
 }
 
 func (a *Actor) HasQueue(name string) bool {
@@ -128,14 +150,30 @@ func (a *Actor) HasQueue(name string) bool {
 	}
 }
 
-func (a *Actor) RegisterConsumer(c func(event.Event), q string) {
+func (a *Actor) MarkQueueConnected(name string) {
+	a.Queuepool[name].connected = true
+}
+func (a *Actor) IsQueueConnected(name string) bool {
+	return a.Queuepool[name].connected
+}
+
+func (a *Actor) RegisterConsumer(c func(event.Event) error, q string) {
 	var tmp = a.Queuepool[q]
 	tmp.function = c
 	tmp.admin = make(chan int)
 	tmp.total = 0
 	tmp.prev_total = 0
+	tmp.state = Pause
 	a.Queuepool[q] = tmp
 	go a.consumer(q)
+}
+
+func (a *Actor) HasConsumer(name string) bool {
+	if a.Queuepool[name].state == None {
+		return false
+	} else {
+		return true
+	}
 }
 
 func (a *Actor) RegisterProducer(p func() event.Event, q string) {
@@ -165,9 +203,19 @@ begin:
 		default:
 			if state != Pause {
 				e := <-a.Queuepool[queue].Queue
-				e.Header[a.Name].IncrementTTL()
-				a.Queuepool[queue].function.(func(event.Event))(e)
-				a.Queuepool[queue].IncrementTotalHits()
+				err := a.Queuepool[queue].function.(func(event.Event) error)(e)
+
+				if err == nil {
+					a.Queuepool[queue].IncrementTotalHits()
+				} else {
+					a.Log("critical", fmt.Sprintf("An error occured.  Reason: %v", err))
+					if _, ok := a.Queuepool["failed"]; ok {
+						a.Queuepool["failed"].Queue <- e
+						a.Queuepool["failed"].IncrementTotalHits()
+					} else {
+						a.Log("warning", "Module has no failed queue.  Dropping event.")
+					}
+				}
 			}
 		}
 	}
@@ -191,7 +239,6 @@ begin:
 		default:
 			if state != Pause {
 				e := a.Queuepool[queue].function.(func() event.Event)()
-				e.Header[a.Name].IncrementTTL()
 				a.Queuepool[queue].Queue <- e
 				a.Queuepool[queue].IncrementTotalHits()
 			}
@@ -226,4 +273,8 @@ func (a *Actor) metricGatherer() {
 		}
 		time.Sleep(time.Second * 1)
 	}
+}
+
+func nullConsumer(e event.Event) error {
+	return nil
 }
