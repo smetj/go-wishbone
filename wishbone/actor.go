@@ -138,6 +138,7 @@ func (a *Actor) CreateQueue(name string, size int) {
 func (a *Actor) GetQueue(name string) chan event.Event {
 	return a.Queuepool[name].Queue
 }
+
 func (a *Actor) SetQueue(name string, q chan event.Event) {
 	a.Queuepool[name].Queue = q
 }
@@ -153,6 +154,7 @@ func (a *Actor) HasQueue(name string) bool {
 func (a *Actor) MarkQueueConnected(name string) {
 	a.Queuepool[name].connected = true
 }
+
 func (a *Actor) IsQueueConnected(name string) bool {
 	return a.Queuepool[name].connected
 }

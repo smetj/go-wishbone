@@ -3,9 +3,12 @@ package router
 import "wishbone/event"
 
 import "wishbone/module/flow/funnel"
-import "time"
+
+// import "time"
 import "strings"
 import "fmt"
+import "os"
+import "os/signal"
 
 func NewRouter() Router {
 	r := Router{}
@@ -76,6 +79,17 @@ func (r *Router) Register(module Module) {
 	r.module[name] = module
 }
 
+func (r *Router) GetModules() <-chan string {
+	ch := make(chan string)
+	go func() {
+		for _, module := range r.module {
+			ch <- module.GetName()
+		}
+		close(ch)
+	}()
+	return ch
+}
+
 func (r *Router) Start() {
 	for _, module := range r.module {
 		r.Connect(fmt.Sprintf("%v.%v", module.GetName(), "_logs"), fmt.Sprintf("_internal_logs.%v", module.GetName()))
@@ -86,6 +100,12 @@ func (r *Router) Start() {
 	}
 }
 
+func (r *Router) Stop() {
+	for module := range r.GetModules() {
+		fmt.Println(module)
+	}
+}
+
 func (r *Router) Pause() {
 	for _, v := range r.module {
 		v.Pause()
@@ -93,7 +113,8 @@ func (r *Router) Pause() {
 }
 
 func (r *Router) Block() {
-	for {
-		time.Sleep(time.Second * 1)
-	}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+	r.Stop()
 }
